@@ -93,6 +93,10 @@ release:
   github:
     owner: juniorsaldanha
     name: hexplore
+  # Lets re-running a release (e.g. after fixing a workflow bug, as
+  # happened while setting this up) overwrite that tag's existing assets
+  # instead of erroring because the release already exists.
+  replace_existing_artifacts: true
   footer: >-
     See [README.md](https://github.com/juniorsaldanha/hexplore#install) for
     per-platform install instructions, including the .deb/.rpm/.pkg.tar.xz/
