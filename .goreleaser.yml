@@ -88,6 +88,21 @@ homebrew_casks:
     license: MIT
     binaries:
       - hexplore
+    # The binary isn't code-signed/notarized (that needs a paid Apple
+    # Developer account), so macOS quarantines it on download and
+    # Gatekeeper refuses to run it ("Apple could not verify..."). Clearing
+    # the quarantine bit on the staged binary is the standard fix every
+    # unsigned-CLI cask uses — verified against a real install.
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/hexplore"]
+    caveats: |
+      hexplore isn't code-signed (no paid Apple Developer account behind
+      this tap yet), so this cask clears the Gatekeeper quarantine bit on
+      install. If you ever see "Apple could not verify hexplore is free of
+      malware", run:
+        xattr -d com.apple.quarantine $(which hexplore)
 
 release:
   github:
