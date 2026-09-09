@@ -68,7 +68,12 @@ jobs:
       # The manifest packages an already-built binary rather than
       # compiling Go inside the Flatpak sandbox — see the manifest's own
       # comment for why.
-      - run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o packaging/flatpak/hexplore ./cmd/hexplore
+      # -buildvcs=false: the container job's checkout is owned by a
+      # different UID than the container user, which makes Go's automatic
+      # VCS stamping shell out to `git status` and hit "detected dubious
+      # ownership" (exit 128) — we inject our own version via ldflags
+      # anyway, so VCS stamping isn't needed here.
+      - run: go build -trimpath -buildvcs=false -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o packaging/flatpak/hexplore ./cmd/hexplore
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:

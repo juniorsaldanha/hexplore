@@ -79,6 +79,9 @@ homebrew_casks:
       owner: juniorsaldanha
       name: homebrew-tap
       branch: main
+      # The default GITHUB_TOKEN is scoped to this repo only — a PAT with
+      # write access to homebrew-tap is required for this cross-repo push.
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
     homepage: https://github.com/juniorsaldanha/hexplore
     description: Read-only Bitcoin block explorer for your terminal
