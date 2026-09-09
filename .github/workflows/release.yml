@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Builds every archive, the .deb/.rpm/.pkg.tar.zst, calculates
+      # checksums, creates the GitHub release, and pushes the Homebrew
+      # cask to juniorsaldanha/homebrew-tap — see .goreleaser.yml.
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A classic or fine-grained PAT with contents:write on
+          # juniorsaldanha/homebrew-tap — the default GITHUB_TOKEN above is
+          # scoped to this repo only and can't push there.
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      # nfpm's archlinux format produces .pkg.tar.zst (pacman's current
+      # default compression); repackage as the .pkg.tar.xz this project
+      # actually ships, as an additional release asset alongside it.
+      - name: Repackage Arch package as .pkg.tar.xz
+        run: |
+          sudo apt-get update && sudo apt-get install -y zstd xz-utils
+          for f in dist/*.pkg.tar.zst; do
+            base="$(basename "$f" .pkg.tar.zst)"
+            zstd -d "$f" -o "dist/$base.pkg.tar"
+            xz "dist/$base.pkg.tar"
+          done
+          gh release upload "${{ github.ref_name }}" dist/*.pkg.tar.xz --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  flatpak:
+    runs-on: ubuntu-latest
+    # Image name per flatpak/flatpak-github-actions' current README — if
+    # this tag stops resolving, check that project for the current
+    # freedesktop-runtime image name/tag.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-23.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # The manifest packages an already-built binary rather than
+      # compiling Go inside the Flatpak sandbox — see the manifest's own
+      # comment for why.
+      - run: go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o packaging/flatpak/hexplore ./cmd/hexplore
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: hexplore.flatpak
+          manifest-path: packaging/flatpak/io.github.juniorsaldanha.hexplore.yml
+          cache: false
+          upload-artifact: false
+
+      - name: Upload Flatpak bundle to the release
+        run: gh release upload "${{ github.ref_name }}" hexplore.flatpak --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

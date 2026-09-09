@@ -1,0 +1,35 @@
+# Flatpak manifest for hexplore — a terminal app, so no display sockets are
+# needed, just network (to reach mempool.space) and a place for its own
+# config/cache.
+#
+# This packages an already-built binary (see .github/workflows/release.yml)
+# rather than compiling Go inside the sandbox — much simpler than getting
+# the golang SDK extension + module fetching working under
+# --share=network, and entirely legitimate for a bundle we distribute
+# ourselves. It's NOT Flathub-submission-ready as written: Flathub requires
+# building from pinned, verifiable sources (a git tag or tarball + sha256),
+# not a locally-provided binary. Submitting there later would mean
+# switching the "hexplore" module's sources to a git/archive source and
+# building from source inside the sandbox instead.
+app-id: io.github.juniorsaldanha.hexplore
+runtime: org.freedesktop.Platform
+runtime-version: "23.08"
+sdk: org.freedesktop.Sdk
+command: hexplore
+
+finish-args:
+  - --share=network
+  - --filesystem=xdg-config/hexplore:create
+  - --filesystem=xdg-cache/hexplore:create
+
+modules:
+  - name: hexplore
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 hexplore /app/bin/hexplore
+      - install -Dm644 LICENSE /app/share/doc/hexplore/LICENSE
+    sources:
+      - type: file
+        path: hexplore
+      - type: file
+        path: ../../LICENSE

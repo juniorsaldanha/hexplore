@@ -1,0 +1,4 @@
+/hexplore
+/dist/
+*.db
+.DS_Store

@@ -1,0 +1,104 @@
+version: 2
+
+project_name: hexplore
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: hexplore
+    main: ./cmd/hexplore
+    binary: hexplore
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: hexplore
+    ids: [hexplore]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+# .deb, .rpm and an Arch package all come from nfpm directly — it only
+# packages the linux binaries from the referenced build, amd64+arm64 both.
+# nfpm's archlinux format produces .pkg.tar.zst (pacman's current default
+# compression); .github/workflows/release.yml repackages it as the
+# .pkg.tar.xz this project actually ships, as an additional release asset.
+# The Flatpak bundle is a separate job there too, since it isn't an
+# nfpm-supported format.
+nfpms:
+  - id: hexplore
+    ids: [hexplore]
+    package_name: hexplore
+    file_name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    vendor: Junior Saldanha
+    homepage: https://github.com/juniorsaldanha/hexplore
+    maintainer: Junior Saldanha <esaldanha@ionic.health>
+    description: >-
+      Read-only Bitcoin block explorer for your terminal. No wallet, no
+      private keys, no signing.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - archlinux
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/hexplore/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/hexplore/README.md
+
+# Pushed into the existing juniorsaldanha/homebrew-tap repo's Casks/
+# directory — GoReleaser's own guidance is homebrew_casks over the
+# deprecated `brews` formula generator even for a plain CLI binary, and it
+# matches how that tap is already laid out.
+homebrew_casks:
+  - name: hexplore
+    ids: [hexplore]
+    repository:
+      owner: juniorsaldanha
+      name: homebrew-tap
+      branch: main
+    directory: Casks
+    homepage: https://github.com/juniorsaldanha/hexplore
+    description: Read-only Bitcoin block explorer for your terminal
+    license: MIT
+    binaries:
+      - hexplore
+
+release:
+  github:
+    owner: juniorsaldanha
+    name: hexplore
+  footer: >-
+    See [README.md](https://github.com/juniorsaldanha/hexplore#install) for
+    per-platform install instructions, including the .deb/.rpm/.pkg.tar.xz/
+    Flatpak builds and the install script attached below.
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
