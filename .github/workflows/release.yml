@@ -83,6 +83,10 @@ jobs:
           upload-artifact: false
 
       - name: Upload Flatpak bundle to the release
-        run: gh release upload "${{ github.ref_name }}" hexplore.flatpak --clobber
+        # --repo avoids gh needing to detect the repo from git — inside
+        # this container, checkout is owned by a different UID than the
+        # container user, and git's safe.directory check would otherwise
+        # block that with "detected dubious ownership".
+        run: gh release upload "${{ github.ref_name }}" hexplore.flatpak --repo "${{ github.repository }}" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
